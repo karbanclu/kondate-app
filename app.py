@@ -4,24 +4,19 @@ import json
 import gspread
 
 # --- 1. スプレッドシートの準備 ---
-# Streamlitの金庫（Secrets）から合鍵を取り出して辞書に変換
 credentials_dict = json.loads(st.secrets["gcp_service_account_json"])
-# 合鍵を使ってGoogleにログイン
 gc = gspread.service_account_from_dict(credentials_dict)
-# スプレッドシートを開く（名前が違う場合はここを変更！）
 sh = gc.open("menu_data") 
-# 最初のシートを選ぶ
 worksheet = sh.sheet1
 
 # アプリのタイトル
-st.title("わが家の献立ルーレット 3.0 🍽️")
+st.title("わが家の献立ルーレット 4.0 🍽️")
 
 # --- 2. メニューを読み込む関数 ---
 def load_menus():
-    # A列のすべての値を取得（1行目の見出しは省く）
     records = worksheet.col_values(1)
     if len(records) > 1:
-        return records[1:]
+        return records[1:] # 1行目の見出しを除いて返す
     else:
         return []
 
@@ -35,11 +30,10 @@ new_menu = st.text_input("新しい献立の名前を入力してください")
 
 if st.button("リストに追加する"):
     if new_menu:
-        # スプレッドシートの一番下に書き込む！
         worksheet.append_row([new_menu])
-        # 画面のリストも更新する
         st.session_state.menu_list.append(new_menu)
-        st.success(f"「{new_menu}」をスプレッドシートに保存しました！")
+        st.success(f"「{new_menu}」を保存しました！")
+        st.rerun() # 画面を更新して削除リストにも反映させる
     else:
         st.error("献立名を入力してください")
 
@@ -53,6 +47,30 @@ if st.button("ルーレットを回す！"):
     else:
         st.warning("メニューがありません。追加してください！")
 
-# --- 現在のリストを確認（おまけ） ---
-with st.expander("現在のレパートリーを確認する"):
+# --- 5. メニューを削除する機能 (新機能！) ---
+st.subheader("🗑️ レパートリーを整理する")
+if len(st.session_state.menu_list) > 0:
+    # 削除したいメニューをセレクトボックスで選択
+    delete_target = st.selectbox("削除する献立を選んでください", st.session_state.menu_list)
+    
+    if st.button("選択した献立を削除する"):
+        # スプレッドシート上の行番号を計算
+        # (リストの順番 0から開始) + (見出しの1行分) + (1から数えるための調整1) = +2
+        idx = st.session_state.menu_list.index(delete_target)
+        row_to_delete = idx + 2
+        
+        # Googleスプレッドシートから行を削除
+        worksheet.delete_rows(row_to_delete)
+        
+        # アプリ内のリストからも削除
+        st.session_state.menu_list.pop(idx)
+        
+        st.warning(f"「{delete_target}」を削除しました。")
+        # 画面を最新の状態に更新
+        st.rerun()
+else:
+    st.write("削除できるメニューがありません。")
+
+# 現在のリストを確認
+with st.expander("現在の全レパートリーを確認"):
     st.write(st.session_state.menu_list)
