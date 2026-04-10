@@ -2,6 +2,7 @@ import streamlit as st
 import random
 import json
 import gspread
+import urllib.parse # ★新しく追加：URLの日本語を翻訳する部品
 
 # --- 1. スプレッドシートの準備 ---
 credentials_dict = json.loads(st.secrets["gcp_service_account_json"])
@@ -10,7 +11,7 @@ sh = gc.open("menu_data")
 worksheet = sh.sheet1
 
 # アプリのタイトル
-st.title("わが家の献立ルーレット 5.0 🍽️")
+st.title("わが家の献立ルーレット 6.0 🍽️")
 
 # --- 2. 状態の初期化 ---
 def load_menus():
@@ -23,7 +24,6 @@ def load_menus():
 if 'menu_list' not in st.session_state:
     st.session_state.menu_list = load_menus()
 
-# ★新しく「前回選ばれたメニュー」を記憶する箱を用意
 if 'last_chosen' not in st.session_state:
     st.session_state.last_chosen = None
 
@@ -46,23 +46,33 @@ if st.button("ルーレットを回す！"):
     menu_count = len(st.session_state.menu_list)
     
     if menu_count > 1:
-        # 候補リストから「前回選ばれたメニュー」を除外する
         available_menus = [m for m in st.session_state.menu_list if m != st.session_state.last_chosen]
-        
-        # 除外した後のリストからランダムに選ぶ
         chosen = random.choice(available_menus)
-        
-        # 今回選ばれたメニューを「前回出たメニュー」として新しく記憶させる
         st.session_state.last_chosen = chosen 
         
         st.header(f"今日は「{chosen}」に決定！")
         st.balloons()
         
+        # ★追加：レシピ検索用のURLを作り、リンクボタンを表示する
+        # 「〇〇(メニュー名) レシピ」という検索ワードを作る
+        search_word = chosen + " レシピ"
+        # URLで使える文字に変換する（日本語の文字化けを防ぐため）
+        encoded_word = urllib.parse.quote(search_word)
+        # Google検索のURLと合体させる（クックパッド等に変えることも可能です）
+        search_url = f"https://www.google.com/search?q={encoded_word}"
+        
+        # リンクボタンを画面に表示
+        st.link_button(f"🍳 「{chosen}」のレシピをWebで探す", search_url)
+        
     elif menu_count == 1:
-        # メニューが1つしかない場合はそれをそのまま出す
         chosen = st.session_state.menu_list[0]
         st.header(f"今日は「{chosen}」に決定！")
         st.balloons()
+        
+        search_word = chosen + " レシピ"
+        encoded_word = urllib.parse.quote(search_word)
+        search_url = f"https://www.google.com/search?q={encoded_word}"
+        st.link_button(f"🍳 「{chosen}」のレシピをWebで探す", search_url)
         
     else:
         st.warning("メニューがありません。追加してください！")
@@ -78,7 +88,6 @@ if len(st.session_state.menu_list) > 0:
         worksheet.delete_rows(row_to_delete)
         st.session_state.menu_list.pop(idx)
         
-        # ★もし「前回選んだメニュー」を削除した場合は、記憶をリセットする
         if st.session_state.last_chosen == delete_target:
             st.session_state.last_chosen = None
             
