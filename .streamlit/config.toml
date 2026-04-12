@@ -1,0 +1,15 @@
+[theme]
+# ボタンやアクセントになるメインカラー（トマト色）
+primaryColor = "#FF6347"
+
+# アプリの背景色（温かみのあるクリーム色）
+backgroundColor = "#FFF8DC"
+
+# 入力枠やサイドバーの背景色（少し濃いクリーム色）
+secondaryBackgroundColor = "#FFE4B5"
+
+# 文字の色（優しいダークブラウン）
+textColor = "#5C4033"
+
+# フォント（標準のゴシック体）
+font = "sans serif"
